@@ -1,10 +1,17 @@
 package com.trieuhuy.chatapp.infrastructure.persistence.repository;
 
 import com.trieuhuy.chatapp.domain.model.User;
+import com.trieuhuy.chatapp.domain.model.UserSearchCriteria;
 import com.trieuhuy.chatapp.domain.repository.UserRepository;
+import com.trieuhuy.chatapp.infrastructure.persistence.entity.UserEntity;
 import com.trieuhuy.chatapp.infrastructure.persistence.mapper.UserMapper;
+import com.trieuhuy.chatapp.infrastructure.persistence.specification.UserJpaSpecifications;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -15,7 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserRepositoryImpl implements UserRepository {
 
-    private final JpaUserRepository jpaUserRepository;
+    private final UserJpaRepository jpaUserRepository;
     private final UserMapper userMapper;
 
     @Override
@@ -33,6 +40,22 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public Optional<User> findByEmail(String email) {
         return jpaUserRepository.findByEmail(email)
+                .map(userMapper::toDomain);
+    }
+
+    @Override
+    public Page<@NonNull User> findAll(UserSearchCriteria criteria, Pageable pageable) {
+
+        Specification<@NonNull UserEntity> specification = Specification
+                .where(UserJpaSpecifications.hasStatus(String.valueOf(criteria.status())))
+                .and(UserJpaSpecifications.hasRole(String.valueOf(criteria.role())))
+                .and(UserJpaSpecifications.keyword(criteria.keyword()))
+                .and(UserJpaSpecifications.createdFrom(criteria.from()))
+                .and(UserJpaSpecifications.createdTo(criteria.to()));
+
+        return jpaUserRepository.findAll(
+                        specification,
+                        pageable)
                 .map(userMapper::toDomain);
     }
 
