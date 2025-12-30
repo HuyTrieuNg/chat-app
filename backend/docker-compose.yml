@@ -3,9 +3,9 @@ services:
     image: postgres:14
     container_name: chatapp_db
     env_file:
-      - .env.local
+      - .env
     environment:
-      - TZ=${TZ}
+      - PGTZ=${TZ}
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
@@ -33,7 +33,7 @@ services:
 
   redis:
     image: redis:7.2
-    container_name: redis-auth
+    container_name: redis-container
     ports:
       - "6379:6379"
     command: [ "redis-server", "--appendonly", "yes" ]
