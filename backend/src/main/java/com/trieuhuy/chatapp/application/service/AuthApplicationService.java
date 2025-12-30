@@ -126,7 +126,7 @@ public class AuthApplicationService {
 
         log.info("Access token refreshed for user: {}", user.getUsername());
 
-        return new RefreshTokenResponse(accessToken, jwtProperties.getAccessTokenExpiration());
+        return new RefreshTokenResponse(accessToken, newRefreshToken, jwtProperties.getAccessTokenExpiration());
     }
 
     @Transactional
