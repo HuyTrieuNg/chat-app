@@ -8,7 +8,8 @@ import { useEffect, useState } from "react";
 import type { User } from "@/types/auth";
 
 export default function HomePage() {
-  const { user, clearAuth } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const navigate = useNavigate();
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
@@ -66,7 +67,7 @@ export default function HomePage() {
 
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold">🎉 User Profile</h2>
+            <h2 className="text-xl font-semibold">🎉 Happy new year!</h2>
             <Button
               onClick={fetchUserData}
               variant="outline"
