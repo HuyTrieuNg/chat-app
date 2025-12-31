@@ -44,6 +44,11 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    if (originalRequest.url?.includes("/auth/refresh")) {
+      isRefreshing = false;
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -63,7 +68,7 @@ apiClient.interceptors.response.use(
         const response = await axios.post(
           `${BASE_URL}/auth/refresh`,
           {},
-          { withCredentials: true }
+          { withCredentials: true, timeout: 5000 }
         );
 
         const { accessToken } = response.data;
@@ -83,7 +88,10 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         useAuthStore.getState().clearAuth();
-        window.location.href = "/login";
+
+        if (!window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
+        }
 
         return Promise.reject(refreshError);
       } finally {
