@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,8 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { authApi } from "@/services/authService";
-import { useAuthStore } from "@/store/authStore";
+import { useRegister } from "@/hooks/useAuth";
 
 const registerSchema = z
   .object({
@@ -29,7 +27,7 @@ const registerSchema = z
         /^[a-zA-Z0-9_]+$/,
         "Username can only contain letters, numbers, and underscores"
       ),
-    email: z.string().email("Invalid email address"),
+    email: z.email("Invalid email address"),
     password: z
       .string()
       .min(6, "Password must be at least 6 characters")
@@ -44,9 +42,7 @@ const registerSchema = z
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const [isLoading, setIsLoading] = useState(false);
+  const registerMutation = useRegister();
 
   const {
     register,
@@ -56,36 +52,12 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: RegisterFormData) => {
-    setIsLoading(true);
-    try {
-      const response = await authApi.register({
-        username: data.username,
-        email: data.email,
-        password: data.password,
-      });
-      setAuth(
-        {
-          userId: response.userId,
-          username: response.username,
-          email: response.email,
-        },
-        response.accessToken
-      );
-      toast.success("Account created successfully!");
-      navigate("/");
-    } catch (error) {
-      let message = "Registration failed. Please try again.";
-      if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as {
-          response?: { data?: { message?: string } };
-        };
-        message = axiosError.response?.data?.message || message;
-      }
-      toast.error(message);
-    } finally {
-      setIsLoading(false);
-    }
+  const onSubmit = (data: RegisterFormData) => {
+    registerMutation.mutate({
+      username: data.username,
+      email: data.email,
+      password: data.password,
+    });
   };
 
   const handleOAuthRegister = (provider: string) => {
@@ -119,7 +91,7 @@ export default function RegisterPage() {
                   placeholder="Choose a username"
                   className="pl-10"
                   {...register("username")}
-                  disabled={isLoading}
+                  disabled={registerMutation.isPending}
                 />
               </div>
               {errors.username && (
@@ -139,7 +111,7 @@ export default function RegisterPage() {
                   placeholder="Enter your email"
                   className="pl-10"
                   {...register("email")}
-                  disabled={isLoading}
+                  disabled={registerMutation.isPending}
                 />
               </div>
               {errors.email && (
@@ -159,7 +131,7 @@ export default function RegisterPage() {
                   placeholder="Create a password"
                   className="pl-10"
                   {...register("password")}
-                  disabled={isLoading}
+                  disabled={registerMutation.isPending}
                 />
               </div>
               {errors.password && (
@@ -179,7 +151,7 @@ export default function RegisterPage() {
                   placeholder="Confirm your password"
                   className="pl-10"
                   {...register("confirmPassword")}
-                  disabled={isLoading}
+                  disabled={registerMutation.isPending}
                 />
               </div>
               {errors.confirmPassword && (
@@ -189,8 +161,12 @@ export default function RegisterPage() {
               )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={registerMutation.isPending}
+            >
+              {registerMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating account...
@@ -219,7 +195,7 @@ export default function RegisterPage() {
                 type="button"
                 variant="outline"
                 onClick={() => handleOAuthRegister("google")}
-                disabled={isLoading}
+                disabled={registerMutation.isPending}
               >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
@@ -245,7 +221,7 @@ export default function RegisterPage() {
                 type="button"
                 variant="outline"
                 onClick={() => handleOAuthRegister("github")}
-                disabled={isLoading}
+                disabled={registerMutation.isPending}
               >
                 <svg
                   className="mr-2 h-4 w-4"

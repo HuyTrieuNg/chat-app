@@ -16,6 +16,8 @@ apiClient.interceptors.request.use(
     const token = useAuthStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization;
     }
     return config;
   },
@@ -73,13 +75,10 @@ apiClient.interceptors.response.use(
 
         const { accessToken } = response.data;
 
-        // Update token
+        // Update token in store
         useAuthStore.getState().updateAccessToken(accessToken);
 
-        // Update header and process queue
-        apiClient.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${accessToken}`;
+        // Update current request header
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
         processQueue(null, accessToken);

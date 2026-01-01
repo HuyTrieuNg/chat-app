@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User } from "@/types/auth";
+import type { User } from "@/types/user";
+import { apiClient } from "@/lib/axios";
 
 interface AuthState {
   user: User | null;
@@ -19,14 +20,24 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       isAuthenticated: false,
 
-      setAuth: (user, accessToken) =>
-        set({ user, accessToken, isAuthenticated: true }),
+      setAuth: (user, accessToken) => {
+        set({ user, accessToken, isAuthenticated: true });
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      },
 
-      clearAuth: () =>
-        set({ user: null, accessToken: null, isAuthenticated: false }),
+      clearAuth: () => {
+        set({ user: null, accessToken: null, isAuthenticated: false });
+        delete apiClient.defaults.headers.common['Authorization'];
+      },
 
-      updateAccessToken: (accessToken) =>
-        set({ accessToken, isAuthenticated: !!accessToken }),
+      updateAccessToken: (accessToken) => {
+        set({ accessToken, isAuthenticated: !!accessToken });
+        if (accessToken) {
+          apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        } else {
+          delete apiClient.defaults.headers.common['Authorization'];
+        }
+      },
 
       initAuth: () => {
         const user = get().user;

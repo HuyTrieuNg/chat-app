@@ -1,47 +1,30 @@
 import { useAuthStore } from "@/store/authStore";
-import { authApi } from "@/services/authService";
-import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogOut, MessageCircle, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
-import type { User } from "@/types/auth";
+import { useCurrentUser, useLogout } from "@/hooks/useAuth";
+import toast from "react-hot-toast";
 
 export default function HomePage() {
   const user = useAuthStore((state) => state.user);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
-  const navigate = useNavigate();
-  const [userData, setUserData] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const {
+    data: userData,
+    isLoading,
+    refetch,
+    dataUpdatedAt,
+  } = useCurrentUser();
+  const logoutMutation = useLogout();
 
-  const fetchUserData = async () => {
-    setLoading(true);
-    try {
-      const data = await authApi.getCurrentUser();
-      setUserData(data);
-      toast.success("User data loaded successfully");
-    } catch (error) {
-      console.error("Fetch user error:", error);
-      toast.error("Failed to load user data");
-    } finally {
-      setLoading(false);
+  const handleRefresh = async () => {
+    const result = await refetch();
+    if (result.isSuccess) {
+      toast.success("User data refreshed successfully");
+    } else if (result.isError) {
+      toast.error("Failed to refresh user data");
     }
   };
 
-  useEffect(() => {
-    fetchUserData();
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      await authApi.logout();
-      clearAuth();
-      toast.success("Logged out successfully");
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast.error("Logout failed");
-    }
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   return (
@@ -69,19 +52,19 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">🎉 Happy new year!</h2>
             <Button
-              onClick={fetchUserData}
+              onClick={handleRefresh}
               variant="outline"
               size="sm"
-              disabled={loading}
+              disabled={isLoading}
             >
               <RefreshCw
-                className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                className={`mr-2 h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
               />
               Refresh Data
             </Button>
           </div>
 
-          {loading && !userData ? (
+          {isLoading && !userData ? (
             <div className="text-center py-8">
               <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary" />
               <p className="mt-4 text-muted-foreground">Loading user data...</p>
@@ -101,7 +84,9 @@ export default function HomePage() {
                   <p className="text-sm text-muted-foreground mb-1">
                     Last Fetched
                   </p>
-                  <p className="text-sm">{new Date().toLocaleString()}</p>
+                  <p className="text-sm">
+                    {new Date(dataUpdatedAt).toLocaleString()}
+                  </p>
                 </div>
               </div>
               <div className="mt-6 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
