@@ -1,5 +1,6 @@
 package com.trieuhuy.chatapp.domain.service;
 
+import com.trieuhuy.chatapp.domain.model.AuthProvider;
 import com.trieuhuy.chatapp.domain.model.User;
 import com.trieuhuy.chatapp.domain.model.UserStatus;
 import com.trieuhuy.chatapp.domain.repository.UserRepository;
@@ -38,6 +39,8 @@ public class UserDomainService {
                 .username(username)
                 .email(email)
                 .passwordHash(encodedPassword)
+                .provider(AuthProvider.LOCAL)
+                .providerId(null)
                 .status(UserStatus.OFFLINE)
                 .active(true)
                 .build();

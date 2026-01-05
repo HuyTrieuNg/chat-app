@@ -34,4 +34,8 @@ export const authApi = {
     const response = await apiClient.get<User>("/users/me");
     return response.data;
   },
+
+  oAuthLogin: async (provider: string): Promise<void> => {
+    apiClient.get(`/oauth2/authorization/${provider}`);
+  },
 };

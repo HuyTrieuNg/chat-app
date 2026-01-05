@@ -10,38 +10,36 @@ interface AuthState {
   setAuth: (user: User, accessToken: string) => void;
   clearAuth: () => void;
   updateAccessToken: (accessToken: string) => void;
-  initAuth: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       accessToken: null,
       isAuthenticated: false,
 
-      setAuth: (user, accessToken) => {
+      setAuth: (user: User | null, accessToken: string) => {
         set({ user, accessToken, isAuthenticated: true });
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        apiClient.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${accessToken}`;
       },
 
       clearAuth: () => {
         set({ user: null, accessToken: null, isAuthenticated: false });
-        delete apiClient.defaults.headers.common['Authorization'];
+        delete apiClient.defaults.headers.common["Authorization"];
       },
 
       updateAccessToken: (accessToken) => {
         set({ accessToken, isAuthenticated: !!accessToken });
         if (accessToken) {
-          apiClient.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+          apiClient.defaults.headers.common[
+            "Authorization"
+          ] = `Bearer ${accessToken}`;
         } else {
-          delete apiClient.defaults.headers.common['Authorization'];
+          delete apiClient.defaults.headers.common["Authorization"];
         }
-      },
-
-      initAuth: () => {
-        const user = get().user;
-        set({ isAuthenticated: !!user });
       },
     }),
     {

@@ -5,30 +5,29 @@ import RegisterPage from "@/pages/RegisterPage";
 import HomePage from "@/pages/HomePage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicRoute from "@/components/PublicRoute";
-import { useAuthStore } from "@/store/authStore";
 import { toastConfig } from "@/config/toast.config";
-import { useEffect } from "react";
+import OAuth2Callback from "@/pages/OAuth2Callback";
+import { AuthInitializer } from "@/components/AuthInitializer";
 
 function App() {
-  useEffect(() => {
-    useAuthStore.getState().initAuth();
-  }, []);
-
   return (
     <BrowserRouter>
-      <Toaster {...toastConfig} />
-      <Routes>
-        <Route element={<PublicRoute />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
+      <AuthInitializer>
+        <Toaster {...toastConfig} />
+        <Routes>
+          <Route element={<PublicRoute />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/oauth2/callback" element={<OAuth2Callback />} />
+          </Route>
 
-        <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<HomePage />} />
-        </Route>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<HomePage />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthInitializer>
     </BrowserRouter>
   );
 }

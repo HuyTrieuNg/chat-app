@@ -44,6 +44,12 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByProviderAndProviderId(String provider, String providerId) {
+        return jpaUserRepository.findByProviderAndProviderId(provider, providerId)
+                .map(userMapper::toDomain);
+    }
+
+    @Override
     public Page<@NonNull User> findAll(UserSearchCriteria criteria, Pageable pageable) {
 
         Specification<@NonNull UserEntity> specification = Specification

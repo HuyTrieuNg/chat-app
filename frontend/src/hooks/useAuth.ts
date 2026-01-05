@@ -67,6 +67,21 @@ export function useRegister() {
   });
 }
 
+export function useRefreshToken() {
+  const updateAccessToken = useAuthStore((state) => state.updateAccessToken);
+
+  return useMutation({
+    mutationFn: () => authApi.refresh(),
+    onSuccess: (data) => {
+      updateAccessToken(data.accessToken);
+      console.log("Access token refreshed");
+    },
+    onError: (error) => {
+      console.log("Refresh token not available or expired: ", error);
+    },
+  });
+}
+
 export function useLogout() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const navigate = useNavigate();
@@ -87,11 +102,15 @@ export function useLogout() {
   });
 }
 
-export function useCurrentUser() {
+export function useCurrentUser(enabled = true) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const accessToken = useAuthStore((state) => state.accessToken);
+
   return useQuery({
     queryKey: authKeys.currentUser,
     queryFn: () => authApi.getCurrentUser(),
     gcTime: 5 * 60 * 1000,
     refetchOnMount: true,
+    enabled: enabled && (isAuthenticated || !!accessToken),
   });
 }

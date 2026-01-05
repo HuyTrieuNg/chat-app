@@ -17,6 +17,8 @@ public class User {
     private String username;
     private String email;
     private String passwordHash;
+    private AuthProvider provider;
+    private String providerId;
     private String avatarUrl;
     private UserStatus status;
     private boolean active;

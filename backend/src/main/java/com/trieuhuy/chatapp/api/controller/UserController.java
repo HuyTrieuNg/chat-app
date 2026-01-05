@@ -8,6 +8,7 @@ import com.trieuhuy.chatapp.domain.model.UserStatus;
 import com.trieuhuy.chatapp.infrastructure.security.util.SecurityUtils;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 
+@Slf4j
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
@@ -31,12 +33,16 @@ public class UserController {
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<@NonNull Map<String, Object>> getCurrentUser() {
-        String username = SecurityUtils.getCurrentUsername();
         var userId = SecurityUtils.getCurrentUserId();
+        String username = SecurityUtils.getCurrentUsername();
+        String email = SecurityUtils.getCurrentUserEmail();
+
+        log.info("Current user - ID: {}, Username: {}, Email: {}", userId, username, email);
 
         return ResponseEntity.ok(Map.of(
                 "userId", userId != null ? userId : "",
                 "username", username != null ? username : "",
+                "email", email != null ? email : "",
                 "authenticated", SecurityUtils.isAuthenticated()
         ));
     }

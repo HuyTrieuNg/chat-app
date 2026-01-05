@@ -16,6 +16,7 @@ public interface UserJpaRepository
 {
     Optional<UserEntity> findByUsername(String username);
     Optional<UserEntity> findByEmail(String email);
+    Optional<UserEntity> findByProviderAndProviderId(String provider, String providerId);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
 }

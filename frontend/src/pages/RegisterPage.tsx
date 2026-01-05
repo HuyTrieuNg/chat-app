@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import toast from "react-hot-toast";
 import { MessageCircle, Mail, Lock, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,8 +60,7 @@ export default function RegisterPage() {
   };
 
   const handleOAuthRegister = (provider: string) => {
-    toast("OAuth registration coming soon!", { icon: "🚧" });
-    // TODO: Implement OAuth registration
+    window.location.href = `/oauth2/authorization/${provider}`;
     console.log(`OAuth register with ${provider}`);
   };
 

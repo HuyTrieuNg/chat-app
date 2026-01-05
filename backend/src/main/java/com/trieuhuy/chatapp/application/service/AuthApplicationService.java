@@ -46,6 +46,7 @@ public class AuthApplicationService {
             Objects.requireNonNull(userDetails, "User details cannot be null");
 
             User user = userRepository.findByUsername(request.username())
+                    .or(() -> userRepository.findByEmail(request.username()))
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             // Generate tokens
@@ -58,7 +59,7 @@ public class AuthApplicationService {
                     jwtProperties.getRefreshTokenExpiration()
             );
 
-            log.info("User logged in successfully: {}", request.username());
+            log.info("User logged in successfully: {}", user.getUsername());
 
             return new LoginResponse(
                     accessToken,
@@ -113,7 +114,10 @@ public class AuthApplicationService {
         User user = userRepository.findById(refreshToken.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        
+        if (user.getUsername() == null || user.getUsername().isBlank()) {
+            throw new RuntimeException("User username is invalid");
+        }
+
         String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername());
 
         authDomainService.revokeToken(request.refreshToken());

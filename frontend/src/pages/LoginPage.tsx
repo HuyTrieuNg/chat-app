@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import toast from "react-hot-toast";
 import { MessageCircle, Lock, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,8 +39,8 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = (provider: string) => {
-    toast("OAuth login coming soon!", { icon: "🚧" });
-    // TODO: Implement OAuth login
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    window.location.href = `${apiUrl}/oauth2/authorization/${provider}`;
     console.log(`OAuth login with ${provider}`);
   };
 

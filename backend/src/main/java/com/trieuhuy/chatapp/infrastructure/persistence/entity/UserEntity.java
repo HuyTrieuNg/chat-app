@@ -11,7 +11,8 @@ import java.util.UUID;
         name = "users",
         indexes = {
                 @Index(name = "idx_user_username", columnList = "username"),
-                @Index(name = "idx_user_email", columnList = "email")
+                @Index(name = "idx_user_email", columnList = "email"),
+                @Index(name = "idx_user_provider_providerId", columnList = "provider, providerId")
         }
 )
 @Getter
@@ -28,8 +29,11 @@ public class UserEntity extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
     private String passwordHash;
+
+    private String provider; // LOCAL | GOOGLE | GITHUB
+
+    private String providerId;
 
     private String avatarUrl;
 

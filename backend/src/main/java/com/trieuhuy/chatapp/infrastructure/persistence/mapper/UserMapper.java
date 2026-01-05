@@ -1,5 +1,6 @@
 package com.trieuhuy.chatapp.infrastructure.persistence.mapper;
 
+import com.trieuhuy.chatapp.domain.model.AuthProvider;
 import com.trieuhuy.chatapp.domain.model.User;
 import com.trieuhuy.chatapp.domain.model.UserStatus;
 import com.trieuhuy.chatapp.infrastructure.persistence.entity.UserEntity;
@@ -18,6 +19,8 @@ public class UserMapper {
                 .username(entity.getUsername())
                 .email(entity.getEmail())
                 .passwordHash(entity.getPasswordHash())
+                .provider(entity.getProvider() != null ? AuthProvider.valueOf(entity.getProvider()) : AuthProvider.LOCAL)
+                .providerId(entity.getProviderId())
                 .avatarUrl(entity.getAvatarUrl())
                 .status(UserStatus.valueOf(entity.getStatus()))
                 .active(entity.isActive())
@@ -38,6 +41,8 @@ public class UserMapper {
         entity.setUsername(domain.getUsername());
         entity.setEmail(domain.getEmail());
         entity.setPasswordHash(domain.getPasswordHash());
+        entity.setProvider(domain.getProvider() != null ? domain.getProvider().name() : AuthProvider.LOCAL.name());
+        entity.setProviderId(domain.getProviderId());
         entity.setAvatarUrl(domain.getAvatarUrl());
         entity.setStatus(domain.getStatus().name());
         entity.setActive(domain.isActive());

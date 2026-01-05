@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, MessageCircle, RefreshCw } from "lucide-react";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 export default function HomePage() {
   const user = useAuthStore((state) => state.user);
@@ -26,6 +27,8 @@ export default function HomePage() {
   const handleLogout = () => {
     logoutMutation.mutate();
   };
+
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
@@ -106,6 +109,14 @@ export default function HomePage() {
             <p>User ID: {user?.userId}</p>
             <p>Email: {user?.email}</p>
           </div>
+
+          <button
+            onClick={() => {
+              navigate("/login");
+            }}
+          >
+            Go to login
+          </button>
         </div>
       </div>
     </div>

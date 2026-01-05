@@ -2,6 +2,9 @@ package com.trieuhuy.chatapp.infrastructure.security.config;
 
 import com.trieuhuy.chatapp.infrastructure.security.jwt.JwtAuthenticationEntryPoint;
 import com.trieuhuy.chatapp.infrastructure.security.jwt.JwtAuthenticationFilter;
+import com.trieuhuy.chatapp.infrastructure.security.oauth.CustomOauth2UserService;
+import com.trieuhuy.chatapp.infrastructure.security.oauth.OAuth2AuthenticationFailureHandler;
+import com.trieuhuy.chatapp.infrastructure.security.oauth.OAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,21 +34,37 @@ public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtFilter;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            CustomOauth2UserService customOauth2UserService
+    ) {
         return http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/error").permitAll()
+                        .requestMatchers(
+                                "/auth/**",
+                                "/oauth2/**",
+                                "/login/**",
+                                "/error"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.
                         sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.
                         authenticationEntryPoint(new JwtAuthenticationEntryPoint()))
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(u -> u
+                                .userService(customOauth2UserService)
+                        )
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
+                        .failureHandler(oAuth2AuthenticationFailureHandler)
+                )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
