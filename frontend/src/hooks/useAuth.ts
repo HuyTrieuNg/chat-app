@@ -69,6 +69,7 @@ export function useRegister() {
 
 export function useRefreshToken() {
   const updateAccessToken = useAuthStore((state) => state.updateAccessToken);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
 
   return useMutation({
     mutationFn: () => authApi.refresh(),
@@ -77,6 +78,7 @@ export function useRefreshToken() {
       console.log("Access token refreshed");
     },
     onError: (error) => {
+      clearAuth();
       console.log("Refresh token not available or expired: ", error);
     },
   });

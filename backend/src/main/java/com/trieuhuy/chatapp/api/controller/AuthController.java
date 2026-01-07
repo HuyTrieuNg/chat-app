@@ -46,16 +46,25 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<@NonNull RefreshTokenResponse> refreshToken(
-            @CookieValue(name = REFRESH_TOKEN_COOKIE_NAME) String refreshToken,
+            @CookieValue(name = REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken,
             HttpServletResponse response) {
-        RefreshTokenResponse refreshResponse = authService.refreshToken(new RefreshTokenRequest(refreshToken));
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-        setRefreshTokenCookie(response, refreshResponse.refreshToken());
+        try {
+            RefreshTokenResponse refreshResponse = authService.refreshToken(new RefreshTokenRequest(refreshToken));
 
-        return ResponseEntity.ok(new RefreshTokenResponse(
-                refreshResponse.accessToken(),
-                refreshResponse.expiresIn()
-        ));
+            setRefreshTokenCookie(response, refreshResponse.refreshToken());
+
+            return ResponseEntity.ok(new RefreshTokenResponse(
+                    refreshResponse.accessToken(),
+                    refreshResponse.expiresIn()
+            ));
+        } catch (Exception e) {
+            clearRefreshTokenCookie(response);
+            throw e;
+        }
     }
 
     @PostMapping("/logout")

@@ -8,7 +8,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
 import java.time.Instant;
+import java.util.Locale;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,13 +28,6 @@ public class OAuthLoginService {
     private User createUser(OAuthUserCommand cmd) {
         String username = generateUniqueUsername(cmd.name(), cmd.email());
         String email = cmd.email();
-
-//        if (email == null || email.isBlank()) {
-//            email = String.format("%s.%s@oauth.placeholder",
-//                cmd.provider().name().toLowerCase(),
-//                cmd.providerId()
-//            );
-//        }
 
         User newUser = User.builder()
                 .username(username)
@@ -52,20 +48,25 @@ public class OAuthLoginService {
         String baseUsername;
 
         if (name != null && !name.isBlank()) {
-            baseUsername = name.toLowerCase().replaceAll("\\s+", "_");
+            baseUsername = slugify(name);
         } else if (email != null && !email.isBlank()) {
-            baseUsername = email.split("@")[0];
+            baseUsername = slugify(email.split("@")[0]);
         } else {
             baseUsername = "user";
         }
+        String suffix = UUID.randomUUID().toString().substring(0, 4);
 
-        String username = baseUsername;
-        int counter = 1;
+        return baseUsername + "_" + suffix;
+    }
 
-        while (userRepository.existsByUsername(username)) {
-            username = baseUsername + "_" + counter++;
-        }
+    private String slugify(String input) {
+        String slug = Normalizer.normalize(input, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]", "_")
+                .replaceAll("_+", "_")
+                .replaceAll("^_|_$", "");
 
-        return username;
+        return slug.isBlank() ? "user" : slug;
     }
 }
