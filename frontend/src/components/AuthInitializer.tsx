@@ -1,7 +1,7 @@
 import { useCurrentUser, useRefreshToken } from "@/hooks/useAuth";
 import { useAuthStore } from "@/store/authStore";
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Outlet } from "react-router-dom";
 
 export function AuthInitializer({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -72,5 +72,10 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
     return <div>Loading...</div>;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <Outlet />
+    </>
+  );
 }
