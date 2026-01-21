@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -39,6 +40,9 @@ public class UserEntity extends BaseEntity {
 
     @Column(nullable = false)
     private String status; // ONLINE | OFFLINE | AWAY
+
+    @Column
+    private Instant lastSeenAt;
 
     @Column(nullable = false)
     private boolean isActive = true;

@@ -53,6 +53,7 @@ dist-ssr
 
 # Editor directories and files
 .vscode/*
+.github
 !.vscode/extensions.json
 .idea
 .DS_Store

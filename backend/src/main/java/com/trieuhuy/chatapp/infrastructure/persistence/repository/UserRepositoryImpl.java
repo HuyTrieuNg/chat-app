@@ -53,8 +53,9 @@ public class UserRepositoryImpl implements UserRepository {
     public Page<@NonNull User> findAll(UserSearchCriteria criteria, Pageable pageable) {
 
         Specification<@NonNull UserEntity> specification = Specification
-                .where(UserJpaSpecifications.hasStatus(String.valueOf(criteria.status())))
-                .and(UserJpaSpecifications.hasRole(String.valueOf(criteria.role())))
+                .where(UserJpaSpecifications.hasStatus(
+                    criteria.status() != null ? criteria.status().name() : null
+                ))
                 .and(UserJpaSpecifications.keyword(criteria.keyword()))
                 .and(UserJpaSpecifications.createdFrom(criteria.from()))
                 .and(UserJpaSpecifications.createdTo(criteria.to()));

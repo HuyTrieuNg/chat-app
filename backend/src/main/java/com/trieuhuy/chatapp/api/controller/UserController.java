@@ -1,8 +1,11 @@
 package com.trieuhuy.chatapp.api.controller;
 
+import com.trieuhuy.chatapp.application.dto.BulkPresenceResponse;
+import com.trieuhuy.chatapp.application.dto.UserProfileResponse;
 import com.trieuhuy.chatapp.application.dto.UserResponse;
+import com.trieuhuy.chatapp.application.service.PresenceApplicationService;
 import com.trieuhuy.chatapp.application.service.UserApplicationService;
-import com.trieuhuy.chatapp.domain.model.UserRole;
+import com.trieuhuy.chatapp.domain.model.User;
 import com.trieuhuy.chatapp.domain.model.UserSearchCriteria;
 import com.trieuhuy.chatapp.domain.model.UserStatus;
 import com.trieuhuy.chatapp.infrastructure.security.util.SecurityUtils;
@@ -13,14 +16,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -28,7 +30,8 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserApplicationService userService;
+    private final UserApplicationService userManagementService;
+    private final PresenceApplicationService presenceService;
 
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
@@ -48,7 +51,7 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<@NonNull Map<String, String>> getProfile() {
         return ResponseEntity.ok(Map.of(
                 "message", "This is a protected endpoint",
@@ -56,11 +59,18 @@ public class UserController {
         ));
     }
 
+    @GetMapping("/{userId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<@NonNull UserProfileResponse> getUserProfile(@PathVariable UUID userId) {
+        log.debug("Getting user profile: userId={}", userId);
+        User user = userManagementService.getUserProfile(userId);
+        return ResponseEntity.ok(UserProfileResponse.from(user));
+    }
+
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public Page<@NonNull UserResponse> getUsers(
             @RequestParam(required = false) UserStatus status,
-            @RequestParam(required = false) UserRole role,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
@@ -71,11 +81,18 @@ public class UserController {
         }
 
         UserSearchCriteria criteria =
-                new UserSearchCriteria(status, role, keyword, from, to);
+                new UserSearchCriteria(status, keyword, from, to);
 
-        return userService.
-                findAll(criteria, pageable)
+        return userManagementService
+                .searchUsers(criteria, pageable)
                 .map(UserResponse::from);
     }
-}
 
+    @PostMapping("/presence")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<BulkPresenceResponse> getBulkPresence(@RequestBody List<UUID> userIds) {
+        log.debug("Getting bulk presence for {} users", userIds.size());
+        Map<UUID, UserStatus> statuses = presenceService.getBulkPresenceStatus(userIds);
+        return ResponseEntity.ok(new BulkPresenceResponse(statuses));
+    }
+}

@@ -3,10 +3,13 @@ import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { LogOut, MessageCircle } from "lucide-react";
 import { useLogout } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 export default function App() {
   const user = useAuthStore((state) => state.user);
   const logoutMutation = useLogout();
+
+  useWebSocket();
 
   const handleLogout = () => {
     logoutMutation.mutate();

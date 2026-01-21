@@ -23,6 +23,7 @@ public class UserMapper {
                 .providerId(entity.getProviderId())
                 .avatarUrl(entity.getAvatarUrl())
                 .status(UserStatus.valueOf(entity.getStatus()))
+                .lastSeenAt(entity.getLastSeenAt())
                 .active(entity.isActive())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
@@ -45,6 +46,7 @@ public class UserMapper {
         entity.setProviderId(domain.getProviderId());
         entity.setAvatarUrl(domain.getAvatarUrl());
         entity.setStatus(domain.getStatus().name());
+        entity.setLastSeenAt(domain.getLastSeenAt());
         entity.setActive(domain.isActive());
 
         return entity;
@@ -60,6 +62,7 @@ public class UserMapper {
         entity.setPasswordHash(domain.getPasswordHash());
         entity.setAvatarUrl(domain.getAvatarUrl());
         entity.setStatus(domain.getStatus().name());
+        entity.setLastSeenAt(domain.getLastSeenAt());
         entity.setActive(domain.isActive());
         entity.setUpdatedAt(domain.getUpdatedAt());
     }

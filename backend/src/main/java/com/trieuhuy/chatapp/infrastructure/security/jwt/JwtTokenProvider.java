@@ -31,6 +31,12 @@ public class JwtTokenProvider {
         return createToken(claims, userDetails.getUsername(), props.getAccessTokenExpiration());
     }
 
+    public String generateAccessToken(String username, String userId) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+        return createToken(claims, username, props.getAccessTokenExpiration());
+    }
+
     public String generateRefreshToken(String username) {
         SecureRandom random = new SecureRandom();
         byte[] bytes = new byte[32];
@@ -56,6 +62,10 @@ public class JwtTokenProvider {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public String extractUserId(String token) {
+        return extractClaim(token, claims -> claims.get("userId", String.class));
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
@@ -72,6 +82,14 @@ public class JwtTokenProvider {
     public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUserName(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+
+    public boolean isTokenValid(String token) {
+        try {
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean isTokenExpired(String token) {

@@ -26,7 +26,6 @@ public class UserDomainService {
     }
 
     public User createUser(String username, String email, String encodedPassword) {
-        // Validate business rules
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("Username already exists");
         }
@@ -48,12 +47,27 @@ public class UserDomainService {
         return userRepository.save(user);
     }
 
-    public void changeUserStatus(UUID userId, UserStatus newStatus) {
+    public void setUserOnline(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
-        user.changeStatus(newStatus);
+        user.markOnline();
+        userRepository.save(user);
+    }
+
+    public void setUserOffline(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
+        user.markOffline();
+        userRepository.save(user);
+    }
+
+    public void setUserAway(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        user.markAway();
         userRepository.save(user);
     }
 
@@ -62,7 +76,6 @@ public class UserDomainService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
         user.activate();
-        
         userRepository.save(user);
     }
 
@@ -71,7 +84,6 @@ public class UserDomainService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
         user.deactivate();
-        
         userRepository.save(user);
     }
 }

@@ -50,8 +50,8 @@ public class AuthApplicationService {
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             // Generate tokens
-            String accessToken = jwtTokenProvider.generateAccessToken(userDetails);
-            String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails.getUsername());
+            String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername(), user.getId().toString());
+            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername());
 
             authDomainService.createRefreshToken(
                     user.getId(),
@@ -85,8 +85,8 @@ public class AuthApplicationService {
         );
 
         // Generate tokens
-        String accessToken = jwtTokenProvider.generateAccessToken(request.username());
-        String refreshToken = jwtTokenProvider.generateRefreshToken(request.username());
+        String accessToken = jwtTokenProvider.generateAccessToken(savedUser.getUsername(), savedUser.getId().toString());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(savedUser.getUsername());
 
         authDomainService.createRefreshToken(
                 savedUser.getId(),
@@ -118,7 +118,7 @@ public class AuthApplicationService {
             throw new RuntimeException("User username is invalid");
         }
 
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername());
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getUsername(), user.getId().toString());
 
         authDomainService.revokeToken(request.refreshToken());
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getUsername());
