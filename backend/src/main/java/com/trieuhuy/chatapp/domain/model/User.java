@@ -44,6 +44,7 @@ public class User {
 
     public void markOffline() {
         this.status = UserStatus.OFFLINE;
+        this.lastSeenAt = Instant.now();
     }
 
     public void markAway() {

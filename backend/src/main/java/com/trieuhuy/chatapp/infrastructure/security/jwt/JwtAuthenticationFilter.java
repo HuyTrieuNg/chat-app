@@ -3,6 +3,7 @@ package com.trieuhuy.chatapp.infrastructure.security.jwt;
 import com.trieuhuy.chatapp.infrastructure.security.userdetails.MyUserDetailService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,20 +44,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             token = authHeader.substring(7);
             try {
                 username = jwtTokenProvider.extractUserName(token);
-            } catch (io.jsonwebtoken.security.SignatureException e) {
-                log.error("Invalid JWT signature", e);
+            } catch (SignatureException e) {
+                log.error("Invalid JWT signature", e.getMessage());
                 sendErrorResponse(response, "INVALID_SIGNATURE", "Invalid JWT signature", false);
                 return;
             } catch (ExpiredJwtException e) {
-                log.error("JWT token expired", e);
+                log.error("JWT token expired", e.getMessage());
                 sendErrorResponse(response, "TOKEN_EXPIRED", "Access token expired. Please use refresh token to get a new access token.", true);
                 return;
             } catch (MalformedJwtException e) {
-                log.error("Malformed JWT token", e);
+                log.error("Malformed JWT token", e.getMessage());
                 sendErrorResponse(response, "MALFORMED_TOKEN", "Malformed JWT token", false);
                 return;
             } catch (Exception e) {
-                log.error("JWT processing error", e);
+                log.error("JWT processing error", e.getMessage());
                 sendErrorResponse(response, "JWT_ERROR", "JWT processing error", false);
                 return;
             }

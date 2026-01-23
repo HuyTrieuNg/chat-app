@@ -1,5 +1,6 @@
 package com.trieuhuy.chatapp.api.websocket.publisher;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -19,9 +20,14 @@ public class PresencePublisher {
     private final SimpMessagingTemplate template;
 
     public void broadcastUserStatusChange(UUID userId, UserStatus newStatus) {
+        broadcastUserStatusChange(userId, newStatus, null);
+    }
+
+    public void broadcastUserStatusChange(UUID userId, UserStatus newStatus, Instant lastSeen) {
         String destination = "/topic/presence";
-        PresenceStatusDto payload = new PresenceStatusDto(userId, newStatus);
-        log.debug("Broadcasting presence: userId={}, status={} to {}", userId, newStatus, destination);
+        PresenceStatusDto payload = new PresenceStatusDto(userId, newStatus, lastSeen);
+        log.debug("Broadcasting presence: userId={}, status={}, lastSeen={} to {}", 
+                  userId, newStatus, lastSeen, destination);
         template.convertAndSend(destination, payload);
     }
 }

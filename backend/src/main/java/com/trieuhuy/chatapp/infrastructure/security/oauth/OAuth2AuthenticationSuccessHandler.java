@@ -50,7 +50,10 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         clearAuthenticationAttributes(request);
 
         // Generate tokens
-        String accessToken = jwtTokenProvider.generateAccessToken(oauthUser.getUser().getUsername());
+        String accessToken = jwtTokenProvider.generateAccessToken(
+                oauthUser.getUser().getUsername(), 
+                oauthUser.getId().toString()
+        );
         String refreshToken = jwtTokenProvider.generateRefreshToken(oauthUser.getUser().getUsername());
 
         // Save refresh token to database

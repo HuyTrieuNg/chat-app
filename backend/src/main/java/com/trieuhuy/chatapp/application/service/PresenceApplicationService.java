@@ -13,16 +13,17 @@ import com.trieuhuy.chatapp.domain.repository.CacheRepository;
 import com.trieuhuy.chatapp.domain.service.UserDomainService;
 import com.trieuhuy.chatapp.infrastructure.redis.presence.PresenceDebounce;
 import com.trieuhuy.chatapp.infrastructure.redis.presence.RedisPresenceStore;
+import com.trieuhuy.chatapp.infrastructure.redis.util.RedisKeyBuilder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+// Redis store is the source of truth for real-time presence status
+// Database is updated with debounce to reduce write load
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PresenceApplicationService {
-
-    private static final String USER_PROFILE_KEY_PREFIX = "user:profile:";
 
     private final UserDomainService userDomainService;
     private final PresencePublisher presencePublisher;
@@ -31,33 +32,59 @@ public class PresenceApplicationService {
     private final RedisPresenceStore redisPresenceStore;
 
     public void userConnected(UUID userId) {
+        redisPresenceStore.setStatus(userId, UserStatus.ONLINE);
+        log.debug("Redis: Set user {} status to ONLINE", userId);
+        
         if (presenceDebounce.shouldUpdateDb(userId)) {
             userDomainService.setUserOnline(userId);
-            log.debug("update user {} last seen", userId);
+            log.debug("DB: Updated user {} to ONLINE", userId);
         }
+        
         presencePublisher.broadcastUserStatusChange(userId, UserStatus.ONLINE);
-        log.debug("broadcast user {} online", userId);
+        log.debug("WebSocket: Broadcasted user {} ONLINE", userId);
     }
 
     public void userDisconnected(UUID userId) {
+        redisPresenceStore.setStatus(userId, UserStatus.OFFLINE);
+        log.debug("Redis: Set user {} status to OFFLINE", userId);
+        
         if (presenceDebounce.shouldUpdateDb(userId)) {
             userDomainService.setUserOffline(userId);
             evictUserCache(userId);
-            log.debug("update user {} last seen", userId);
+            log.debug("DB: Updated user {} to OFFLINE with lastSeen timestamp", userId);
         }
-        presencePublisher.broadcastUserStatusChange(userId, UserStatus.OFFLINE);
-        log.debug("broadcast user {} offline", userId);
+        
+        var user = userDomainService.findById(userId);
+        presencePublisher.broadcastUserStatusChange(userId, UserStatus.OFFLINE, user.getLastSeenAt());
+        log.debug("WebSocket: Broadcasted user {} OFFLINE with lastSeen={}", userId, user.getLastSeenAt());
     }
 
     public void userAway(UUID userId) {
+        redisPresenceStore.setStatus(userId, UserStatus.AWAY);
+        log.debug("Redis: Set user {} status to AWAY", userId);
+        
         userDomainService.setUserAway(userId);
         evictUserCache(userId);
+        log.debug("DB: Updated user {} to AWAY", userId);
+        
         presencePublisher.broadcastUserStatusChange(userId, UserStatus.AWAY);
-        log.debug("broadcast user {} away", userId);
+        log.debug("WebSocket: Broadcasted user {} AWAY", userId);
+    }
+
+    public void updateUserActivity(UUID userId) {
+        redisPresenceStore.updateLastActivity(userId);
+        log.trace("Updated activity for user: {}", userId);
+        
+        String currentStatus = redisPresenceStore.getStatus(userId);
+        if ("AWAY".equals(currentStatus)) {
+            redisPresenceStore.setStatus(userId, UserStatus.ONLINE);
+            presencePublisher.broadcastUserStatusChange(userId, UserStatus.ONLINE);
+            log.debug("User {} returned from AWAY to ONLINE", userId);
+        }
     }
 
     private void evictUserCache(UUID userId) {
-        cacheRepository.evict(USER_PROFILE_KEY_PREFIX + userId);
+        cacheRepository.evict(RedisKeyBuilder.userProfile(userId));
     }
 
     public Map<UUID, UserStatus> getBulkPresenceStatus(List<UUID> userIds) {

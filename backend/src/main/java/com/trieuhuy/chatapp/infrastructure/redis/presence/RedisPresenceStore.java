@@ -5,6 +5,9 @@ import java.util.UUID;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+import com.trieuhuy.chatapp.domain.model.UserStatus;
+import com.trieuhuy.chatapp.infrastructure.redis.util.RedisKeyBuilder;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -14,79 +17,160 @@ import lombok.extern.slf4j.Slf4j;
 public class RedisPresenceStore {
     
     private final RedisTemplate<String, Object> redisTemplate;
-    private static final String PRESENCE_KEY_PREFIX = "presence:conn:";
-    private static final String LAST_ACTIVE_KEY_PREFIX = "presence:last_active:";
-    private static final long AWAY_THRESHOLD_MS = 5 * 60 * 1000;
+    private static final long AWAY_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+    private static final long HEARTBEAT_TIMEOUT_MS = 60 * 1000; // 60 seconds
 
-    public boolean connect(UUID userId) {
-        String key = PRESENCE_KEY_PREFIX + userId;
-        Long result = redisTemplate.opsForValue().increment(key);
-
-        redisTemplate.opsForValue().set(
-           LAST_ACTIVE_KEY_PREFIX + userId, 
-           String.valueOf(System.currentTimeMillis()) 
-        );
-
-        return result != null && result == 1;
+    public boolean addSocket(UUID userId, String sessionId) {
+        String socketsKey = RedisKeyBuilder.presenceSockets(userId);
+        
+        // Add session to user's active sockets set
+        redisTemplate.opsForSet().add(socketsKey, sessionId);
+        
+        // Initialize heartbeat for this user
+        updateHeartbeat(userId);
+        updateLastActivity(userId);
+        
+        Long socketsCount = redisTemplate.opsForSet().size(socketsKey);
+        log.debug("Added socket {} for user {}, total sockets: {}", sessionId, userId, socketsCount);
+        
+        // Return true if this was the first socket
+        return socketsCount != null && socketsCount == 1;
     }
 
-    public boolean disconnect(UUID userId) {
-        String key = PRESENCE_KEY_PREFIX + userId;
-        Long result = redisTemplate.opsForValue().decrement(key);
-
-        redisTemplate.opsForValue().set(
-           LAST_ACTIVE_KEY_PREFIX + userId, 
-           String.valueOf(System.currentTimeMillis()) 
-        );
-
-        return result != null && result <= 0;
+    public boolean removeSocket(UUID userId, String sessionId) {
+        String socketsKey = RedisKeyBuilder.presenceSockets(userId);
+        
+        // Remove session from set
+        redisTemplate.opsForSet().remove(socketsKey, sessionId);
+        
+        // Update last activity
+        updateLastActivity(userId);
+        
+        Long remainingSockets = redisTemplate.opsForSet().size(socketsKey);
+        log.debug("Removed socket {} for user {}, remaining sockets: {}", sessionId, userId, remainingSockets);
+        
+        // Return true if no more active sockets
+        return remainingSockets == null || remainingSockets == 0;
     }
 
-    public void touch(UUID userId) {
+    public void updateLastActivity(UUID userId) {
         try {
-            redisTemplate.opsForValue().set(
-               LAST_ACTIVE_KEY_PREFIX + userId, 
-               String.valueOf(System.currentTimeMillis()) 
-            );
+            String key = RedisKeyBuilder.presenceLastActivity(userId);
+            redisTemplate.opsForValue().set(key, String.valueOf(System.currentTimeMillis()));
         } catch (Exception e) {
-            log.error("RedisPresenceStore touch error", e);
+            log.error("Error updating last activity for user: {}", userId, e);
+        }
+    }
+
+    public void updateHeartbeat(UUID userId) {
+        try {
+            String key = RedisKeyBuilder.presenceHeartbeat(userId);
+            redisTemplate.opsForValue().set(key, String.valueOf(System.currentTimeMillis()));
+        } catch (Exception e) {
+            log.error("Error updating heartbeat for user: {}", userId, e);
         }
     }
 
     public boolean shouldAway(UUID userId) {
         try {
-            String key = LAST_ACTIVE_KEY_PREFIX + userId;
-            Object last = redisTemplate.opsForValue().get(key);
+            String key = RedisKeyBuilder.presenceLastActivity(userId);
+            Object lastActivity = redisTemplate.opsForValue().get(key);
 
-            if (last == null) {
+            if (lastActivity == null) {
                 return false;
             }
 
-            long idle = System.currentTimeMillis() - Long.parseLong(last.toString());
+            long idle = System.currentTimeMillis() - Long.parseLong(lastActivity.toString());
+            log.debug("User {} is away for {} seconds", userId, idle);
             return idle >= AWAY_THRESHOLD_MS;
         } catch (Exception e) {
+            log.error("Error checking away status for user: {}", userId, e);
             return false;
+        }
+    }
+
+    public boolean shouldOffline(UUID userId) {
+        try {
+            // Check if there are any active sockets
+            long socketsCount = getActiveSocketsCount(userId);
+            if (socketsCount > 0) {
+                return false;
+            }
+
+            // No active sockets, check heartbeat timeout
+            String heartbeatKey = RedisKeyBuilder.presenceHeartbeat(userId);
+            Object lastHeartbeat = redisTemplate.opsForValue().get(heartbeatKey);
+
+            if (lastHeartbeat == null) {
+                return true;
+            }
+
+            long idle = System.currentTimeMillis() - Long.parseLong(lastHeartbeat.toString());
+            return idle >= HEARTBEAT_TIMEOUT_MS;
+        } catch (Exception e) {
+            log.error("Error checking offline status for user: {}", userId, e);
+            return false;
+        }
+    }
+
+    public void setStatus(UUID userId, UserStatus status) {
+        try {
+            String key = RedisKeyBuilder.presenceStatus(userId);
+            redisTemplate.opsForValue().set(key, status.name());
+            log.debug("Set Redis status for user {}: {}", userId, status);
+            
+            // Update online users set
+            String onlineUsersKey = RedisKeyBuilder.presenceOnlineUsers();
+            if (status == UserStatus.ONLINE || status == UserStatus.AWAY) {
+                redisTemplate.opsForSet().add(onlineUsersKey, userId.toString());
+            } else {
+                redisTemplate.opsForSet().remove(onlineUsersKey, userId.toString());
+            }
+        } catch (Exception e) {
+            log.error("Error setting status for user: {}", userId, e);
         }
     }
 
     public String getStatus(UUID userId) {
         try {
-            String connKey = PRESENCE_KEY_PREFIX + userId;
-            Object connCount = redisTemplate.opsForValue().get(connKey);
+            String statusKey = RedisKeyBuilder.presenceStatus(userId);
+            Object status = redisTemplate.opsForValue().get(statusKey);
             
-            if (connCount == null) {
-                return "OFFLINE";
+            if (status != null) {
+                String statusStr = status.toString();
+                log.debug("Got Redis status for user {}: {}", userId, statusStr);
+                return statusStr;
             }
             
-            long count = Long.parseLong(connCount.toString());
-            if (count <= 0) {
-                return "OFFLINE";
-            }
-            
-            return shouldAway(userId) ? "AWAY" : "ONLINE";
+            // Default to OFFLINE
+            return "OFFLINE";
         } catch (Exception e) {
             log.error("Error getting status for user: {}", userId, e);
             return "OFFLINE";
+        }
+    }
+
+    public long getActiveSocketsCount(UUID userId) {
+        try {
+            String socketsKey = RedisKeyBuilder.presenceSockets(userId);
+            Long count = redisTemplate.opsForSet().size(socketsKey);
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            log.error("Error getting sockets count for user: {}", userId, e);
+            return 0;
+        }
+    }
+
+    public void clearUserPresence(UUID userId) {
+        try {
+            redisTemplate.delete(RedisKeyBuilder.presenceStatus(userId));
+            redisTemplate.delete(RedisKeyBuilder.presenceLastActivity(userId));
+            redisTemplate.delete(RedisKeyBuilder.presenceHeartbeat(userId));
+            redisTemplate.delete(RedisKeyBuilder.presenceSockets(userId));
+            redisTemplate.opsForSet().remove(RedisKeyBuilder.presenceOnlineUsers(), userId.toString());
+            log.debug("Cleared all presence data for user: {}", userId);
+        } catch (Exception e) {
+            log.error("Error clearing presence for user: {}", userId, e);
         }
     }
 }

@@ -6,6 +6,8 @@ import java.util.UUID;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+import com.trieuhuy.chatapp.infrastructure.redis.util.RedisKeyBuilder;
+
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -13,13 +15,13 @@ import lombok.RequiredArgsConstructor;
 public class PresenceDebounce {
     
     private final RedisTemplate<String, Object> redisTemplate;
-    private static final String UPDATE_DB_KEY_PREFIX = "presence:db:update:";
+    private static final Duration DEBOUNCE_DURATION = Duration.ofSeconds(30);
 
     public boolean shouldUpdateDb(UUID userId) {
+        String key = RedisKeyBuilder.presenceDebounce(userId);
         Boolean first = redisTemplate.opsForValue()
-            .setIfAbsent(UPDATE_DB_KEY_PREFIX + userId, "1", Duration.ofSeconds(30));
+            .setIfAbsent(key, "1", DEBOUNCE_DURATION);
         
         return Boolean.TRUE.equals(first);
     }
 }
-    

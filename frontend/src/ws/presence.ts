@@ -4,6 +4,7 @@ import { usePresenceStore, type UserStatus } from "@/store/presenceStore";
 interface PresenceMessage {
   userId: string;
   newStatus: UserStatus;
+  lastSeen?: string;
 }
 
 let presenceSubscription: StompSubscription | null = null;
@@ -26,7 +27,13 @@ export function subscribeToPresence(client: Client): void {
         const data: PresenceMessage = JSON.parse(message.body);
         console.log("Presence update:", data);
 
-        usePresenceStore.getState().setUserStatus(data.userId, data.newStatus);
+        const store = usePresenceStore.getState();
+        store.setUserStatus(data.userId, data.newStatus);
+
+        if (data.lastSeen) {
+          store.setUserLastSeen(data.userId, new Date(data.lastSeen));
+          console.log(`User ${data.userId} lastSeen:`, data.lastSeen);
+        }
       } catch (error) {
         console.error("Failed to parse presence message:", error);
       }
@@ -43,7 +50,9 @@ export function unsubscribeFromPresence(): void {
   if (presenceSubscription) {
     presenceSubscription.unsubscribe();
     presenceSubscription = null;
-    usePresenceStore.getState().clearStatuses();
+    const store = usePresenceStore.getState();
+    store.clearStatuses();
+    store.setWsConnected(false);
     console.log("Unsubscribed from presence");
   }
 }

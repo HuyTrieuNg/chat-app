@@ -4,6 +4,7 @@ import com.trieuhuy.chatapp.domain.model.User;
 import com.trieuhuy.chatapp.domain.model.UserSearchCriteria;
 import com.trieuhuy.chatapp.domain.repository.CacheRepository;
 import com.trieuhuy.chatapp.domain.repository.UserRepository;
+import com.trieuhuy.chatapp.infrastructure.redis.util.RedisKeyBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NullMarked;
@@ -24,13 +25,12 @@ public class UserApplicationService {
     private final UserRepository userRepository;
     private final CacheRepository cacheRepository;
 
-    private static final String USER_PROFILE_KEY_PREFIX = "user:profile:";
     private static final Duration PROFILE_CACHE_TTL = Duration.ofMinutes(60);
 
     @Transactional(readOnly = true)
     public User getUserProfile(UUID userId) {
         log.debug("Getting user profile: userId={}", userId);
-        String cacheKey = USER_PROFILE_KEY_PREFIX + userId;
+        String cacheKey = RedisKeyBuilder.userProfile(userId);
 
         return cacheRepository.get(cacheKey, User.class)
                 .orElseGet(() -> {
@@ -49,6 +49,6 @@ public class UserApplicationService {
 
     public void evictUserProfileCache(UUID userId) {
         log.debug("Evicting user profile cache: userId={}", userId);
-        cacheRepository.evict(USER_PROFILE_KEY_PREFIX + userId);
+        cacheRepository.evict(RedisKeyBuilder.userProfile(userId));
     }
 }

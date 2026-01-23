@@ -2,6 +2,7 @@ package com.trieuhuy.chatapp.infrastructure.redis.repository;
 
 import com.trieuhuy.chatapp.domain.model.RefreshToken;
 import com.trieuhuy.chatapp.domain.repository.RefreshTokenRepository;
+import com.trieuhuy.chatapp.infrastructure.redis.util.RedisKeyBuilder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,12 +23,10 @@ import java.util.concurrent.TimeUnit;
 public class RedisRefreshTokenRepository implements RefreshTokenRepository {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private static final String TOKEN_PREFIX = "refresh_token:";
-    private static final String USER_TOKENS_PREFIX = "user_tokens:";
 
     @Override
     public RefreshToken save(RefreshToken token) {
-        String key = TOKEN_PREFIX + token.getToken();
+        String key = RedisKeyBuilder.refreshToken(token.getToken());
         
         long ttlSeconds = Duration.between(Instant.now(), token.getExpiresAt()).getSeconds();
 
@@ -38,7 +37,7 @@ public class RedisRefreshTokenRepository implements RefreshTokenRepository {
             TimeUnit.SECONDS
         );
 
-        String userKey = USER_TOKENS_PREFIX + token.getUserId();
+        String userKey = RedisKeyBuilder.userTokens(token.getUserId());
         redisTemplate.opsForSet().add(userKey, token.getToken());
         
         log.info("Saved refresh token to Redis: {}", token.getToken());
@@ -47,14 +46,14 @@ public class RedisRefreshTokenRepository implements RefreshTokenRepository {
 
     @Override
     public Optional<RefreshToken> findByToken(String token) {
-        String key = TOKEN_PREFIX + token;
+        String key = RedisKeyBuilder.refreshToken(token);
         RefreshToken refreshToken = (RefreshToken) redisTemplate.opsForValue().get(key);
         return Optional.ofNullable(refreshToken);
     }
 
     @Override
     public Optional<RefreshToken> findByTokenAndNotRevoked(String token) {
-        String key = TOKEN_PREFIX + token;
+        String key = RedisKeyBuilder.refreshToken(token);
         RefreshToken refreshToken = (RefreshToken) redisTemplate.opsForValue().get(key);
         
         if (refreshToken != null && !refreshToken.isRevoked()) {
@@ -66,11 +65,11 @@ public class RedisRefreshTokenRepository implements RefreshTokenRepository {
 
     @Override
     public void revokeToken(RefreshToken token) {
-        String key = TOKEN_PREFIX + token.getToken();
+        String key = RedisKeyBuilder.refreshToken(token.getToken());
         
         redisTemplate.delete(key);
         
-        String userKey = USER_TOKENS_PREFIX + token.getUserId();
+        String userKey = RedisKeyBuilder.userTokens(token.getUserId());
         redisTemplate.opsForSet().remove(userKey, token.getToken());
         
         log.info("Revoked refresh token in Redis: {}", token.getToken());
@@ -78,11 +77,11 @@ public class RedisRefreshTokenRepository implements RefreshTokenRepository {
 
     @Override
     public void deleteByToken(String token) {
-        String key = TOKEN_PREFIX + token;
+        String key = RedisKeyBuilder.refreshToken(token);
         
         RefreshToken refreshToken = (RefreshToken) redisTemplate.opsForValue().get(key);
         if (refreshToken != null) {
-            String userKey = USER_TOKENS_PREFIX + refreshToken.getUserId();
+            String userKey = RedisKeyBuilder.userTokens(refreshToken.getUserId());
             redisTemplate.opsForSet().remove(userKey, token);
         }
         
@@ -92,13 +91,13 @@ public class RedisRefreshTokenRepository implements RefreshTokenRepository {
 
     @Override
     public void deleteByUserId(UUID userId) {
-        String userKey = USER_TOKENS_PREFIX + userId;
+        String userKey = RedisKeyBuilder.userTokens(userId);
         
         var tokens = redisTemplate.opsForSet().members(userKey);
         
         if (tokens != null) {
             tokens.forEach(token -> {
-                String tokenKey = TOKEN_PREFIX + token;
+                String tokenKey = RedisKeyBuilder.refreshToken(token.toString());
                 redisTemplate.delete(tokenKey);
             });
         }
@@ -127,7 +126,7 @@ public class RedisRefreshTokenRepository implements RefreshTokenRepository {
 
     @Override
     public boolean existsByToken(String token) {
-        String key = TOKEN_PREFIX + token;
+        String key = RedisKeyBuilder.refreshToken(token);
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 }

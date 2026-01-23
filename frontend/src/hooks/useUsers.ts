@@ -8,11 +8,20 @@ export function useUsers() {
     queryKey: ["users"],
     queryFn: () => userApi.getUsers(),
     staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchInterval: 1000 * 30, // 30 seconds
   });
+
+  const wsConnected = usePresenceStore((state) => state.wsConnected);
 
   useEffect(() => {
     const fetchPresence = async () => {
+      // Wait for WebSocket to be connected before fetching presence
+      if (!wsConnected) {
+        console.log(
+          "Waiting for WebSocket connection before fetching presence...",
+        );
+        return;
+      }
+
       if (query.data && query.data.length > 0) {
         try {
           const userIds = query.data.map((user) => user.userId);
@@ -29,7 +38,7 @@ export function useUsers() {
     };
 
     fetchPresence();
-  }, [query.data]);
+  }, [query.data, wsConnected]);
 
   return query;
 }
