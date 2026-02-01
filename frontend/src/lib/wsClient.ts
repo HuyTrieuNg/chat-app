@@ -5,8 +5,15 @@ import { useAuthStore } from "@/store/authStore";
 
 let stompClient: Client | null = null;
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
-const WS_ENDPOINT = API_BASE_URL + "/ws";
+const getBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/api$/, "");
+  }
+  return "http://localhost:8080";
+};
+
+const WS_ENDPOINT = getBaseUrl() + "/ws";
 
 export function createWsClient(
   token: string,

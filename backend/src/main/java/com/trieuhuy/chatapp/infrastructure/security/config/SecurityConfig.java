@@ -53,6 +53,7 @@ public class SecurityConfig {
                                 "/ws/**",
                                 "/error"
                         ).permitAll()
+                        .requestMatchers("/chat/**", "/messages/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.
