@@ -12,3 +12,4 @@ export interface Conversation {
   unreadCount?: number | null;
 }
 
+
